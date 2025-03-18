@@ -51,10 +51,9 @@ export default function FileListing({ accessKeyId, bucketName, region, secretAcc
 	const loadNext = useCallback(() => {
 		if (loading) return
 		if (error) return
-		console.log("loadNext", { accessKeyId, bucketName, region, secretAccessKey, cursor })
+
 		getFileListing({ accessKeyId, bucketName, region, secretAccessKey, search: filterValueBounced, cursor })
 			.then((res) => {
-				console.log("setting cursor", res.cursor)
 				setCursor(res.cursor)
 				setData((prev) => [...prev, ...res.items])
 			}).catch((err) => {
@@ -66,14 +65,13 @@ export default function FileListing({ accessKeyId, bucketName, region, secretAcc
 	}, [accessKeyId, bucketName, cursor, filterValueBounced, region, secretAccessKey])
 
 	useEffect(() => {
-
 		//load the first page of files, or when the filter changes
 		setLoading(true)
 		setError(null)
 		setCursor("")
 		setData([])
 		loadNext()
-	}, [filterValueBounced, loadNext])
+	}, [filterValueBounced])
 
 	return (
 		<DropZone className="flex flex-col h-full"

@@ -28,7 +28,7 @@ export const useUpload = ({ accessKeyId, bucketName, region, secretAccessKey, on
 		formData.append("region", region);
 		formData.append("blobName", file.name);
 		formData.append("contentType", file.type);
-		console.log("uploading file", file)
+
 		const url = `/api/upload`
 
 		axios.post(url, formData, {

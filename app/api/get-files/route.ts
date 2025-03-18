@@ -1,7 +1,7 @@
 
 import { BlobListResponse, BlobListResponseItem } from '@/types/BlobListResponseItem';
 import {
-	ListObjectsCommand,
+	ListObjectsV2Command,
 	S3Client,
 	S3ClientConfig,
 } from '@aws-sdk/client-s3';
@@ -27,13 +27,18 @@ export async function GET(request: NextRequest, response: NextResponse) {
 
 	const s3Client = new S3Client(s3Config);
 
-	const command = new ListObjectsCommand({ Bucket: bucketName, Prefix: search, MaxKeys: 20, Marker: cursor });
+	const command = new ListObjectsV2Command({
+		Bucket: bucketName,
+		Prefix: search,
+		MaxKeys: 20,
+		ContinuationToken: cursor || undefined,
+		Delimiter: "/"
+	});
 	const fileRes = await s3Client.send(command);
-
 
 	let data: BlobListResponse = {
 		items: [],
-		cursor: fileRes.NextMarker || ""
+		cursor: fileRes.NextContinuationToken || ""
 	}
 
 	for (const blob of fileRes.Contents || []) {
@@ -42,7 +47,6 @@ export async function GET(request: NextRequest, response: NextResponse) {
 
 		}
 
-		console.log("blob", blob)
 		const blobItem: BlobListResponseItem = {
 			name: blob.Key,
 			properties: {
