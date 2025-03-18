@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, response: NextResponse) {
 
 	const region = searchParams.get("region") || ""
 	const accessKeyId = searchParams.get("accessKeyId") || ""
-	const secretAccessKey = (request.headers.get("secretAccessKey") || '').replace('Bearer ', '')
+	const secretAccessKey = (request.headers.get("Authorization") || '').replace('Bearer ', '')
 	const blobName = searchParams.get("blobName") || ""
 
 	const s3Config: S3ClientConfig = {

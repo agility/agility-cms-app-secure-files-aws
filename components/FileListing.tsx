@@ -48,8 +48,10 @@ export default function FileListing({ accessKeyId, bucketName, region, secretAcc
 
 	const hasMore = useMemo(() => cursor !== "", [cursor])
 
-	const loadNext = () => {
-		console.log("loadNext", cursor)
+	const loadNext = useCallback(() => {
+		if (loading) return
+		if (error) return
+		console.log("loadNext", { accessKeyId, bucketName, region, secretAccessKey, cursor })
 		getFileListing({ accessKeyId, bucketName, region, secretAccessKey, search: filterValueBounced, cursor })
 			.then((res) => {
 				console.log("setting cursor", res.cursor)
@@ -61,16 +63,17 @@ export default function FileListing({ accessKeyId, bucketName, region, secretAcc
 				setLoading(false)
 			})
 
-	}
+	}, [accessKeyId, bucketName, cursor, filterValueBounced, region, secretAccessKey])
 
 	useEffect(() => {
 
 		//load the first page of files, or when the filter changes
 		setLoading(true)
+		setError(null)
 		setCursor("")
 		setData([])
 		loadNext()
-	}, [secretAccessKey, bucketName, filterValueBounced, loadNext])
+	}, [filterValueBounced, loadNext])
 
 	return (
 		<DropZone className="flex flex-col h-full"
@@ -102,6 +105,9 @@ export default function FileListing({ accessKeyId, bucketName, region, secretAcc
 				</div>
 			)}
 			{error && <div>Error? {`${error}`}</div>}
+			{!loading && !error && data.length == 0 && (
+				<div className="p-3 text-sm">No files returned. Drag a file here to upload it.</div>
+			)}
 			{!loading && !error && data.length > 0 && (
 				<div className="min-h-0 flex-1 py-4">
 					<div id="scrolling-list-elem" className="scroll-black h-full overflow-y-auto">
@@ -111,7 +117,9 @@ export default function FileListing({ accessKeyId, bucketName, region, secretAcc
 								dataLength={data.length}
 								next={() => loadNext()}
 								hasMore={hasMore}
-								loader={<h4>Loading...</h4>}>
+								loader={<h4>Loading...</h4>}
+
+							>
 
 								{data?.map((file) => (
 									<li key={file.properties.etag}>

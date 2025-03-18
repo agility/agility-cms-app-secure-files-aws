@@ -186,11 +186,12 @@ export default function Field() {
 											}}
 											className="text-xs" />
 									</div>
-
-									<div className=" flex justify-between py-2 mt-5 border-b border-b-gray-200 ">
-										<div className="text-gray-500">Type</div>
-										<div className="">{selectedFile.properties.contentType}</div>
-									</div>
+									{selectedFile.properties.contentType && (
+										<div className=" flex justify-between py-2 mt-5 border-b border-b-gray-200 ">
+											<div className="text-gray-500">Type</div>
+											<div className="">{selectedFile.properties.contentType}</div>
+										</div>
+									)}
 									<div className=" flex justify-between py-2 mt-5 border-b border-b-gray-200 ">
 										<div className="text-gray-500">Size</div>
 										<div className="">{formatBytes(selectedFile.properties.contentLength)}</div>

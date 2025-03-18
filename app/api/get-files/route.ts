@@ -14,9 +14,8 @@ export async function GET(request: NextRequest, response: NextResponse) {
 	const cursor = searchParams.get("cursor") || ""
 	const region = searchParams.get("region") || ""
 	const accessKeyId = searchParams.get("accessKeyId") || ""
-	const secretAccessKey = (request.headers.get("secretAccessKey") || '').replace('Bearer ', '')
+	const secretAccessKey = (request.headers.get("Authorization") || '').replace('Bearer ', '')
 	const search = `${searchParams.get("search") || ""}`.replaceAll("\"", "")
-
 
 	const s3Config: S3ClientConfig = {
 		credentials: {
@@ -40,7 +39,10 @@ export async function GET(request: NextRequest, response: NextResponse) {
 	for (const blob of fileRes.Contents || []) {
 		if (!blob.Key) {
 			continue
+
 		}
+
+		console.log("blob", blob)
 		const blobItem: BlobListResponseItem = {
 			name: blob.Key,
 			properties: {

@@ -1,6 +1,7 @@
 import { BlobListResponseItem } from '@/types/BlobListResponseItem';
 import {
 	PutObjectCommand,
+	ListObjectsCommand,
 	S3Client,
 	S3ClientConfig,
 
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
 		const arrayBuffer = await file.arrayBuffer();
 		const buffer = new Uint8Array(arrayBuffer);
 
-		const secretAccessKey = (request.headers.get("secretAccessKey") || '').replace('Bearer ', '')
+		const secretAccessKey = (request.headers.get("Authorization") || '').replace('Bearer ', '')
 
 
 		const s3Config: S3ClientConfig = {
@@ -41,6 +42,9 @@ export async function POST(request: NextRequest) {
 		const command = new PutObjectCommand({ Bucket: bucketName, Key: blobName, Body: buffer, ContentType: contentType });
 		const putRes = await s3Client.send(command);
 
+		//get the listing response for this file...
+		const listCommand = new ListObjectsCommand({ Bucket: bucketName, MaxKeys: 1, Prefix: blobName });
+		const fileRes = await s3Client.send(listCommand);
 
 		const blobItem: BlobListResponseItem = {
 			name: blobName,
@@ -51,6 +55,12 @@ export async function POST(request: NextRequest) {
 				contentLength: putRes.Size || 0,
 				contentType: contentType
 			}
+		}
+
+		if (fileRes.Contents?.length === 1) {
+			blobItem.properties.contentLength = fileRes.Contents[0].Size || 0
+			blobItem.properties.lastModified = fileRes.Contents[0].LastModified?.toISOString() || ""
+
 		}
 
 		return NextResponse.json({ status: "success", blobItem });
