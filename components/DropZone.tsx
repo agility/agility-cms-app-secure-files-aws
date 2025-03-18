@@ -89,6 +89,12 @@ export const DropZone = ({ children, readOnly, accessKeyId, bucketName, region, 
 	}, [
 		divRef,
 		readOnly,
+		uploadFile,
+		accessKeyId,
+		bucketName,
+		region,
+		secretAccessKey,
+		onUpload
 	]);
 
 

@@ -3,9 +3,6 @@ import { TextInputAddon } from "@agility/plenum-ui"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { debounce } from "underscore"
 import Loader from "./Loader"
-import ProductRow from "./FileRow"
-import { Product } from "@/types/Product"
-import useFileListing from "@/hooks/useFileListing"
 import FileRow from "./FileRow"
 
 import { DropZone } from "./DropZone"
@@ -49,15 +46,6 @@ export default function FileListing({ accessKeyId, bucketName, region, secretAcc
 		[]
 	)
 
-	useEffect(() => {
-
-		//load the first page of files, or when the filter changes
-		setLoading(true)
-		setCursor("")
-		setData([])
-		loadNext()
-	}, [secretAccessKey, bucketName, filterValueBounced])
-
 	const hasMore = useMemo(() => cursor !== "", [cursor])
 
 	const loadNext = () => {
@@ -74,6 +62,15 @@ export default function FileListing({ accessKeyId, bucketName, region, secretAcc
 			})
 
 	}
+
+	useEffect(() => {
+
+		//load the first page of files, or when the filter changes
+		setLoading(true)
+		setCursor("")
+		setData([])
+		loadNext()
+	}, [secretAccessKey, bucketName, filterValueBounced, loadNext])
 
 	return (
 		<DropZone className="flex flex-col h-full"

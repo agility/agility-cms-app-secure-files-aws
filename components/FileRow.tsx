@@ -1,12 +1,9 @@
 /* eslint-disable jsx-a11y/alt-text */
 /* eslint-disable @next/next/no-img-element */
-import { BlobListResponseItem } from "@/app/api/get-files/route"
-import { Product } from "@/types/Product"
-import { Checkbox } from "@agility/plenum-ui"
-import { IconBan, IconCheck, IconFile } from "@tabler/icons-react"
 import classNames from "classnames"
 import { FileIcon } from "./FileIcon"
 import { formatBytes, formatDateTime } from "@/lib/format"
+import { BlobListResponseItem } from "@/types/BlobListResponseItem"
 
 interface Props {
 

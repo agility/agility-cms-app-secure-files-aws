@@ -83,7 +83,7 @@ export default function Field() {
 			onsetSelectedFile(null)
 		}
 
-	}, [fieldValue])
+	}, [fieldValue, bucketName, region, accessKeyId, secretAccessKey])
 
 
 	const { loading, uploadProgress, uploadFile } = useUpload({

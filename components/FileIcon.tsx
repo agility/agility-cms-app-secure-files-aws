@@ -1,4 +1,5 @@
-import { BlobListResponseItem } from "@/app/api/get-files/route"
+
+import { BlobListResponseItem } from "@/types/BlobListResponseItem"
 import { IconFileTypePdf, IconFileTypeXls, IconFileTypeDocx, IconVideo, IconFileZip, IconFile, IconPhoto } from "@tabler/icons-react"
 
 interface Props {
