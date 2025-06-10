@@ -40,7 +40,7 @@ export default function Field() {
 
 	const selectFileOrDirectory = () => {
 		openModal<FieldValue | null>({
-			title: "Select a File", 
+			title: "Select a File or Directory", 
 			name: "aws-secure-file-selector",
 			props: {
 				allowDirectorySelection: true,
