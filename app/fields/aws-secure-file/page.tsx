@@ -5,14 +5,14 @@ import EmptySection from "@/components/EmptySection"
 
 import { useAgilityAppSDK, contentItemMethods, openModal, useResizeHeight } from "@agility/app-sdk"
 import { Button, ButtonDropDown, TextInput } from "@agility/plenum-ui"
-import { IconFileTypeDocx, IconFileTypePdf, IconFileTypeXls, IconFileUpload, IconFileZip, IconImageInPicture, IconLayoutGrid, IconPhoto, IconVideo } from "@tabler/icons-react"
+import { IconFileTypeDocx, IconFileTypePdf, IconFileTypeXls, IconFileUpload, IconFileZip, IconImageInPicture, IconLayoutGrid, IconPhoto, IconVideo, IconFolder } from "@tabler/icons-react"
 import { IconChevronDown, IconFile } from "@tabler/icons-react"
 import { useEffect, useRef, useState } from "react"
 import { formatBytes, formatDateTime } from "@/lib/format"
 import { DropZone } from "@/components/DropZone"
 import { useUpload } from "@/hooks/useUpload"
 import classNames from "classnames"
-import { BlobListResponseItem } from "@/types/BlobListResponseItem"
+import { BlobListResponseItem, FileItem, DirectoryItem, FieldValue } from "@/types/BlobListResponseItem"
 
 export default function Field() {
 	const { initializing, appInstallContext, field, fieldValue } = useAgilityAppSDK()
@@ -25,78 +25,100 @@ export default function Field() {
 	const secretAccessKey = appInstallContext?.configuration?.AWS_SECRET_ACCESS_KEY || ""
 	const region = appInstallContext?.configuration?.AWS_REGION || ""
 
-	const [selectedFile, onsetSelectedFile] = useState<BlobListResponseItem | null>(null)
+	const [selectedItem, setSelectedItem] = useState<FieldValue | null>(null)
 	const [sasUrl, setSasUrl] = useState<string | null>(null)
 
-	const setSelectedFile = (file: BlobListResponseItem | null) => {
-		onsetSelectedFile(file)
-		if (!file) {
+	const setSelectedValue = (item: FieldValue | null) => {
+		setSelectedItem(item)
+		if (!item) {
 			contentItemMethods.setFieldValue({ name: field?.name, value: "" })
 		} else {
-
-			const json = JSON.stringify(file)
-
+			const json = JSON.stringify(item)
 			contentItemMethods.setFieldValue({ name: field?.name, value: json })
 		}
 	}
 
-	const selectFile = () => {
-		openModal<BlobListResponseItem | null>({
-			title: "Select a File",
+	const selectFileOrDirectory = () => {
+		openModal<FieldValue | null>({
+			title: "Select a File", 
 			name: "aws-secure-file-selector",
 			props: {
-				selectedFile,
+				allowDirectorySelection: true,
 			},
-			callback: (file: BlobListResponseItem | null | undefined) => {
-				if (file) setSelectedFile(file)
+			callback: (result: FieldValue | null | undefined) => {
+				if (result) {
+					setSelectedValue(result)
+				}
 			},
 		})
 	}
 
+	const handleFileUpload = (fileItem: FileItem) => {
+		setSelectedValue(fileItem)
+	}
+
 	useEffect(() => {
-
-		//initialize the field value of the file
+		//initialize the field value
 		if (fieldValue) {
-			const file = JSON.parse(fieldValue) as BlobListResponseItem
-			onsetSelectedFile(file)
-
-			//if we have a file, we need to get the sas url
-
-			fetch(`/api/get-secure-url?bucketName=${encodeURIComponent(bucketName)}&blobName=${encodeURIComponent(file.name)}&region=${encodeURIComponent(region)}&accessKeyId=${encodeURIComponent(accessKeyId)}`, {
-				method: "GET",
-				headers: {
-					'Accept': 'application/json',
-					'Authorization': 'Bearer ' + secretAccessKey,
+			try {
+				const parsed = JSON.parse(fieldValue)
+				
+				// Handle backward compatibility with old file format
+				if (parsed.properties && !parsed.type) {
+					// Old format - convert to new FileItem format
+					const fileItem: FileItem = {
+						...parsed,
+						type: 'file'
+					}
+					setSelectedItem(fileItem)
+				} else if (parsed.type) {
+					// New format - use as is
+					setSelectedItem(parsed as FieldValue)
 				}
-			}).then(res => {
-				if (res.ok) {
-					return res.json()
-				}
-				throw new Error("Could not get SAS URL")
-			}).then(data => {
-				setSasUrl(data.url)
-			}).catch(err => {
-				console.error(err)
-			})
+			} catch (err) {
+				console.error("Error parsing field value:", err)
+				setSelectedItem(null)
+			}
+
+			// Generate secure URL only for files
+			if (selectedItem?.type === 'file') {
+				fetch(`/api/get-secure-url?bucketName=${encodeURIComponent(bucketName)}&blobName=${encodeURIComponent(selectedItem.name)}&region=${encodeURIComponent(region)}&accessKeyId=${encodeURIComponent(accessKeyId)}`, {
+					method: "GET",
+					headers: {
+						'Accept': 'application/json',
+						'Authorization': 'Bearer ' + secretAccessKey,
+					}
+				}).then(res => {
+					if (res.ok) {
+						return res.json()
+					}
+					throw new Error("Could not get SAS URL")
+				}).then(data => {
+					setSasUrl(data.url)
+				}).catch(err => {
+					console.error(err)
+				})
+			} else {
+				setSasUrl(null)
+			}
 
 		} else {
-			onsetSelectedFile(null)
+			setSelectedItem(null)
 		}
 
-	}, [fieldValue, bucketName, region, accessKeyId, secretAccessKey])
-
+	}, [fieldValue, bucketName, region, accessKeyId, secretAccessKey, selectedItem?.type, selectedItem?.name])
 
 	const { loading, uploadProgress, uploadFile } = useUpload({
 		accessKeyId,
 		bucketName,
 		region,
 		secretAccessKey,
-		onUpload: (file) => {
-			setSelectedFile(file)
-		}
+		onUpload: handleFileUpload
 	});
 
-	const ext = (selectedFile?.name.split('.').pop() || "").toLowerCase()
+	useEffect(()=> {
+		console.log('Initializing', initializing)
+	},[initializing])
 
 	if (initializing) return null
 
@@ -108,37 +130,41 @@ export default function Field() {
 				bucketName={bucketName}
 				region={region}
 				secretAccessKey={secretAccessKey}
-				onUpload={(file) => {
-					setSelectedFile(file)
-				}}
+				onUpload={handleFileUpload}
 			>
 				<div className={classNames("transition-all", loading ? "blur-sm" : "blur-0")}>
 					{
-						selectedFile && (
+						selectedItem && selectedItem.type === 'file' && (
 							<div className="flex border border-gray-200 rounded gap-2 p-4">
 								<div className="rounded-l shrink-0">
 									<div className="flex items-center justify-center h-72 w-72 bg-gray-100">
-										{ext === "pdf" ? (<IconFileTypePdf className="h-20 w-20 text-gray-600 stroke-[1.5px]" />) :
-											(ext === "xls" || ext == "xlsx") ? (<IconFileTypeXls className="h-20 w-20 text-gray-600 stroke-[1.5px]" />) :
-												(ext === "doc" || ext == "docx") ? (<IconFileTypeDocx className="h-20 w-20 text-gray-600 stroke-[1.5px]" />) :
-													(ext === "mp4" || ext == "mov") ? (<IconVideo className="h-20 w-20 text-gray-600 stroke-[1.5px]" />) :
-														(ext === "jpg" || ext == "jpeg" || ext == "png" || ext == "svg") ? (
-															<>
-																{/* show the image if we have one... */}
-																{sasUrl ? (<img src={sasUrl} className="h-72 w-72 object-cover " alt={selectedFile.name} />) :
-																	(<IconPhoto className="h-20 w-20 text-gray-600 stroke-[1.5px]" />)}
-															</>
-														) :
-															(ext === "zip" || ext == "rar") ? (<IconFileZip className="h-20 w-20 text-gray-600 stroke-[1.5px]" />) :
-																(<IconFile className="h-20 w-20 text-gray-600 stroke-[1.5px]" />)
-										}
+										{(() => {
+											const displayName = selectedItem.displayName || selectedItem.name
+											const ext = (displayName.split('.').pop() || "").toLowerCase()
+											if (ext === "pdf") return <IconFileTypePdf className="h-20 w-20 text-gray-600 stroke-[1.5px]" />
+											if (ext === "xls" || ext === "xlsx") return <IconFileTypeXls className="h-20 w-20 text-gray-600 stroke-[1.5px]" />
+											if (ext === "doc" || ext === "docx") return <IconFileTypeDocx className="h-20 w-20 text-gray-600 stroke-[1.5px]" />
+											if (ext === "mp4" || ext === "mov") return <IconVideo className="h-20 w-20 text-gray-600 stroke-[1.5px]" />
+											if (ext === "jpg" || ext === "jpeg" || ext === "png" || ext === "svg") {
+												return sasUrl ? (
+													<img src={sasUrl} className="h-72 w-72 object-cover" alt={displayName} />
+												) : (
+													<IconPhoto className="h-20 w-20 text-gray-600 stroke-[1.5px]" />
+												)
+											}
+											if (ext === "zip" || ext === "rar") return <IconFileZip className="h-20 w-20 text-gray-600 stroke-[1.5px]" />
+											return <IconFile className="h-20 w-20 text-gray-600 stroke-[1.5px]" />
+										})()}
 									</div>
-
 								</div>
-								<div className="flex-1 flex-col pl-2 space-y-2 ">
+								<div className="flex-1 flex-col pl-2 space-y-2">
 									<div className="flex gap-2 justify-between items-center">
-										<div className="line-clamp-1 break-all text-sm " title={`Click to get a secure link to this file that will be valid for 10 minutes: ${selectedFile.name}`}>
-											{sasUrl ? (<a href={sasUrl} target="_blank" referrerPolicy="no-referrer" className="text-purple-700 hover:underline">{selectedFile.name}</a>) : selectedFile.name}
+										<div className="line-clamp-1 break-all text-sm" title={`Click to get a secure link to this file that will be valid for 10 minutes: ${selectedItem.displayName || selectedItem.name}`}>
+											{sasUrl ? (
+												<a href={sasUrl} target="_blank" rel="noreferrer" className="text-purple-700 hover:underline">
+													{selectedItem.displayName || selectedItem.name}
+												</a>
+											) : selectedItem.displayName || selectedItem.name}
 										</div>
 										<div>
 											<ButtonDropDown
@@ -147,8 +173,7 @@ export default function Field() {
 													size: "sm",
 													label: "Browse",
 													iconObj: <IconLayoutGrid className="text-gray-400 stroke-[1.5px] h-5 w-5" />,
-
-													onClick: () => selectFile(),
+													onClick: () => selectFileOrDirectory(),
 												}}
 												dropDown={{
 													items: [
@@ -163,7 +188,7 @@ export default function Field() {
 																isEmphasized: true,
 																label: "Remove",
 																onClick: () => {
-																	setSelectedFile(null)
+																	setSelectedValue(null)
 																},
 															},
 														],
@@ -171,7 +196,6 @@ export default function Field() {
 													IconElement: () => <IconChevronDown />,
 												}}
 											/>
-
 										</div>
 									</div>
 
@@ -179,26 +203,35 @@ export default function Field() {
 										<TextInput
 											type="text"
 											placeholder="Label or Alt Text"
-											value={selectedFile.label || ""}
+											value={selectedItem.label || ""}
 											onChange={(str) => {
-												selectedFile.label = str
-												setSelectedFile({ ...selectedFile })
+												const updatedItem = { ...selectedItem, label: str }
+												setSelectedValue(updatedItem)
 											}}
 											className="text-xs" />
 									</div>
-									{selectedFile.properties.contentType && (
-										<div className=" flex justify-between py-2 mt-5 border-b border-b-gray-200 ">
+									<div className="flex justify-between py-2 mt-5 border-b border-b-gray-200">
+										<div className="text-gray-500">Directory</div>
+										<div className="font-mono text-xs">{(() => {
+											const pathParts = selectedItem.name.split('/')
+											pathParts.pop() // Remove filename
+											const dirPath = pathParts.join('/')
+											return dirPath || '/'
+										})()}</div>
+									</div>
+									{selectedItem.properties.contentType && (
+										<div className="flex justify-between py-2 mt-5 border-b border-b-gray-200">
 											<div className="text-gray-500">Type</div>
-											<div className="">{selectedFile.properties.contentType}</div>
+											<div className="">{selectedItem.properties.contentType}</div>
 										</div>
 									)}
-									<div className=" flex justify-between py-2 mt-5 border-b border-b-gray-200 ">
+									<div className="flex justify-between py-2 mt-5 border-b border-b-gray-200">
 										<div className="text-gray-500">Size</div>
-										<div className="">{formatBytes(selectedFile.properties.contentLength)}</div>
+										<div className="">{formatBytes(selectedItem.properties.contentLength)}</div>
 									</div>
-									<div className=" flex justify-between py-2 mt-5 border-b border-b-gray-200 ">
+									<div className="flex justify-between py-2 mt-5 border-b border-b-gray-200">
 										<div className="text-gray-500">Modified On</div>
-										<div className="">{formatDateTime(selectedFile.properties.lastModified)}</div>
+										<div className="">{formatDateTime(selectedItem.properties.lastModified)}</div>
 									</div>
 								</div>
 							</div>
@@ -206,12 +239,94 @@ export default function Field() {
 					}
 
 					{
-						!selectedFile && (
+						selectedItem && selectedItem.type === 'directory' && (
+							<div className="flex border border-blue-200 rounded gap-2 p-4 bg-blue-50">
+								<div className="rounded-l shrink-0">
+									<div className="flex items-center justify-center h-72 w-72 bg-blue-100">
+										<IconFolder className="h-20 w-20 text-blue-600 stroke-[1.5px]" />
+									</div>
+								</div>
+								<div className="flex-1 flex-col pl-2 space-y-2">
+									<div className="flex gap-2 justify-between items-center">
+										<div className="line-clamp-1 break-all text-sm font-medium text-blue-900">
+											Directory: {selectedItem.name}
+										</div>
+										<div>
+											<ButtonDropDown
+												button={{
+													type: "alternative",
+													size: "sm",
+													label: "Browse",
+													iconObj: <IconLayoutGrid className="text-gray-400 stroke-[1.5px] h-5 w-5" />,
+													onClick: () => selectFileOrDirectory(),
+												}}
+												dropDown={{
+													items: [
+														[
+															{
+																isEmphasized: true,
+																label: "Remove",
+																onClick: () => {
+																	setSelectedValue(null)
+																},
+															},
+														],
+													],
+													IconElement: () => <IconChevronDown />,
+												}}
+											/>
+										</div>
+									</div>
+
+									<div className="">
+										<TextInput
+											type="text"
+											placeholder="Label or Description"
+											value={selectedItem.label || ""}
+											onChange={(str) => {
+												const updatedItem = { ...selectedItem, label: str }
+												setSelectedValue(updatedItem)
+											}}
+											className="text-xs" />
+									</div>
+									
+									<div className="flex justify-between py-2 mt-5 border-b border-b-blue-200">
+										<div className="text-blue-700">Directory Path</div>
+										<div className="text-blue-900 font-mono text-xs">{selectedItem.fullPath || "/"}</div>
+									</div>
+									
+									{selectedItem.metadata?.fileCount !== undefined && (
+										<div className="flex justify-between py-2 mt-5 border-b border-b-blue-200">
+											<div className="text-blue-700">File Count</div>
+											<div className="text-blue-900">{selectedItem.metadata.fileCount}</div>
+										</div>
+									)}
+									
+									{selectedItem.metadata?.totalSize !== undefined && (
+										<div className="flex justify-between py-2 mt-5 border-b border-b-blue-200">
+											<div className="text-blue-700">Total Size</div>
+											<div className="text-blue-900">{formatBytes(selectedItem.metadata.totalSize)}</div>
+										</div>
+									)}
+									
+									{selectedItem.metadata?.lastModified && (
+										<div className="flex justify-between py-2 mt-5 border-b border-b-blue-200">
+											<div className="text-blue-700">Last Modified</div>
+											<div className="text-blue-900">{formatDateTime(selectedItem.metadata.lastModified)}</div>
+										</div>
+									)}
+								</div>
+							</div>
+						)
+					}
+
+					{
+						!selectedItem && (
 							<EmptySection
 								icon={<IconFileUpload className="text-gray-400 h-12 w-12" stroke={1} />}
-								messageHeading="No File Selected"
-								messageBody="Select or drag and drop a file to attach it to this item."
-								buttonComponent={<Button type="alternative" onClick={() => selectFile()} label="Browse Files" />}
+								messageHeading="No File or Directory Selected"
+								messageBody="Select or drag and drop a file, or browse to select a directory."
+								buttonComponent={<Button type="alternative" onClick={() => selectFileOrDirectory()} label="Browse Files & Directories" />}
 							/>
 						)
 					}

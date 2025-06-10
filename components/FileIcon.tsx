@@ -1,9 +1,8 @@
-
-import { BlobListResponseItem } from "@/types/BlobListResponseItem"
+import { BlobListResponseItem, FileItem } from "@/types/BlobListResponseItem"
 import { IconFileTypePdf, IconFileTypeXls, IconFileTypeDocx, IconVideo, IconFileZip, IconFile, IconPhoto } from "@tabler/icons-react"
 
 interface Props {
-	file: BlobListResponseItem
+	file: BlobListResponseItem | FileItem
 	size: "sm" | "lg"
 }
 
