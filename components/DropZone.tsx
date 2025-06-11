@@ -1,7 +1,7 @@
 "use client"
 
 import { useUpload } from "@/hooks/useUpload";
-import { BlobListResponseItem } from "@/types/BlobListResponseItem";
+import { FileItem } from "@/types/BlobListResponseItem";
 import axios from "axios";
 import classNames from "classnames";
 import { useEffect, useRef, useState } from "react";
@@ -13,17 +13,18 @@ interface Props {
 	region: string
 	children: any
 	readOnly: boolean | undefined
-	onUpload: (file: BlobListResponseItem) => void
+	onUpload: (file: FileItem) => void
 	className?: string
+	currentPath?: string
 }
 
-export const DropZone = ({ children, readOnly, accessKeyId, bucketName, region, secretAccessKey, className, onUpload }: Props) => {
+export const DropZone = ({ children, readOnly, accessKeyId, bucketName, region, secretAccessKey, className, onUpload, currentPath = "" }: Props) => {
 
 	const divRef = useRef<HTMLDivElement>(null);
 
 	const [isDragging, setIsDragging] = useState(false);
 
-	const { loading, uploadProgress, uploadFile } = useUpload({ accessKeyId, bucketName, region, secretAccessKey, onUpload });
+	const { loading, uploadProgress, uploadFile } = useUpload({ accessKeyId, bucketName, region, secretAccessKey, onUpload, currentPath });
 
 	//initialize the drag-drop
 	useEffect(() => {

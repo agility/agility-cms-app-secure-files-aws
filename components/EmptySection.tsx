@@ -1,25 +1,7 @@
 import IconWithShadow from "./IconWithShadow"
+import { EmptySectionProps } from "@/types/ComponentProps"
 
-interface IEmptySectionProps {
-	icon: JSX.Element
-	/**
-	 * The message heading.
-	 *
-	 * @type {string}
-	 * @memberof IEmptySectionProps
-	 */
-	messageHeading: string
-	/**
-	 * The message body. Use \n to create a new line.
-	 *
-	 * @type {string}
-	 * @memberof IEmptySectionProps
-	 */
-	messageBody: string
-	buttonComponent?: JSX.Element
-}
-
-export default function EmptySection({icon, messageBody, messageHeading, buttonComponent}: IEmptySectionProps) {
+export default function EmptySection({icon, messageBody, messageHeading, buttonComponent}: EmptySectionProps) {
 	return (
 		<div
 			className={

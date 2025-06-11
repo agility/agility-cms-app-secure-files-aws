@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, response: NextResponse) {
 
 	const command = new GetObjectCommand({ Bucket: bucketName, Key: blobName });
 
-	const signedUrlRes = await getSignedUrl(s3Client, command, { expiresIn: 300 });
+	const signedUrlRes = await getSignedUrl(s3Client, command, { expiresIn: 600 });
 
 	return NextResponse.json({ url: signedUrlRes })
 }

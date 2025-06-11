@@ -3,22 +3,16 @@
 import classNames from "classnames"
 import { FileIcon } from "./FileIcon"
 import { formatBytes, formatDateTime } from "@/lib/format"
-import { BlobListResponseItem } from "@/types/BlobListResponseItem"
+import { FileRowProps } from "@/types/ComponentProps"
 
-interface Props {
-
-	item: BlobListResponseItem
-	onSelect: (item: BlobListResponseItem) => void
-}
-
-export default function FileRow({ item, onSelect }: Props) {
+export default function FileRow({ item, onSelect }: FileRowProps) {
 	return (
 		<div className="flex flex-row items-center rounded shadow border border-gray-100 p-2 gap-3">
 			<div className="flex-shrink-0">
 				<FileIcon file={item} size="sm" />
 			</div>
 			<div className="flex-1">
-				<div className="text-sm font-medium text-gray-900">{item.name}</div>
+				<div className="text-sm font-medium text-gray-900">{item.displayName || item.name}</div>
 				<div className="text-sm text-gray-500 line-clamp-3">{item.properties.contentType}</div>
 			</div>
 

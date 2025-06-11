@@ -1,17 +1,17 @@
-
-import { BlobListResponseItem } from "@/types/BlobListResponseItem";
+import { BlobListResponseItem, FileItem } from "@/types/BlobListResponseItem";
 import axios from "axios";
 import { useState } from "react";
 
-interface Props {
+interface UseUploadProps {
 	bucketName: string
 	accessKeyId: string
 	secretAccessKey: string
 	region: string
-	onUpload: (file: BlobListResponseItem) => void
+	onUpload: (file: FileItem) => void
+	currentPath?: string
 }
 
-export const useUpload = ({ accessKeyId, bucketName, region, secretAccessKey, onUpload }: Props) => {
+export const useUpload = ({ accessKeyId, bucketName, region, secretAccessKey, onUpload, currentPath = "" }: UseUploadProps) => {
 
 	const [loading, setLoading] = useState(false);
 
@@ -26,7 +26,10 @@ export const useUpload = ({ accessKeyId, bucketName, region, secretAccessKey, on
 		formData.append("bucketName", bucketName);
 		formData.append("accessKeyId", accessKeyId);
 		formData.append("region", region);
-		formData.append("blobName", file.name);
+		
+		// Include currentPath in the blobName to upload to the correct folder
+		const blobName = currentPath ? `${currentPath}${file.name}` : file.name;
+		formData.append("blobName", blobName);
 		formData.append("contentType", file.type);
 
 		const url = `/api/upload`
@@ -46,7 +49,12 @@ export const useUpload = ({ accessKeyId, bucketName, region, secretAccessKey, on
 		}).then((res) => {
 			if (res.data.status === "success") {
 				const blobItem = res.data.blobItem as BlobListResponseItem
-				onUpload(blobItem)
+				// Convert to FileItem format
+				const fileItem: FileItem = {
+					...blobItem,
+					type: 'file'
+				}
+				onUpload(fileItem)
 			}
 			console.log("File uploaded successfully")
 		})
