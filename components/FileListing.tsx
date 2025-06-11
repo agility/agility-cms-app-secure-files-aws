@@ -92,10 +92,6 @@ export default function FileListing({
 		loadNext()
 	}, [filterValueBounced, currentPath])
 
-	// Separate files and directories for display
-	const directories = data.filter((item): item is DirectoryItem => item.type === 'directory')
-	const files = data.filter((item): item is FileItem => item.type === 'file')
-
 	const createFolder = async () => {
 		if (!newFolderName.trim()) return
 		
@@ -192,40 +188,35 @@ export default function FileListing({
 					<div id="scrolling-list-elem" className="scroll-black h-full overflow-y-auto">
 						<div className="space-y-1 p-2">
 							{/* Directories Section */}
-							{directories.length > 0 && (
-								<div className="space-y-1">
-									{directories.map((directory) => (
-										<DirectoryRow
-											key={directory.fullPath}
-											item={directory}
-											onNavigate={navigateToDirectory}
-											onSelectDirectory={onSelectDirectory}
-										/>
-									))}
-								</div>
-							)}
-
-							{/* Separator between directories and files */}
-							{directories.length > 0 && files.length > 0 && (
-								<div className="border-t border-gray-200 my-2"></div>
-							)}
-
-							{/* Files Section */}
+							{/* Unified list of files and directories */}
 							<InfiniteScroll
 								scrollableTarget="scrolling-list-elem"
-								dataLength={files.length}
+								dataLength={data.length}
 								next={() => loadNext()}
 								hasMore={hasMore}
 								loader={<div className="text-center py-2 text-gray-500">Loading more files...</div>}
 							>
 								<div className="space-y-1">
-									{files.map((file) => (
-										<FileRow
-											key={file.properties.etag}
-											item={file}
-											onSelect={onSelect}
-										/>
-									))}
+									{data.map((item) => {
+										if (item.type === 'directory') {
+											return (
+												<DirectoryRow
+													key={item.fullPath}
+													item={item}
+													onNavigate={navigateToDirectory}
+													onSelectDirectory={onSelectDirectory}
+												/>
+											)
+										} else {
+											return (
+												<FileRow
+													key={item.properties.etag}
+													item={item}
+													onSelect={onSelect}
+												/>
+											)
+										}
+									})}
 								</div>
 							</InfiniteScroll>
 
